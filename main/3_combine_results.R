@@ -6,6 +6,7 @@ library(here)
 library(easyRPubMed)
 library(janitor)
 library(readxl)
+library(pdfRetrieve)
 
 #----------------------------------------------------------------------------------------
 # load results
@@ -60,7 +61,7 @@ publications <- publications |>
 
 count(publications, year)
 
-corresponding_authorship <- read_csv("T:/Dokumente/publications_CA.csv")
+corresponding_authorship <- read_csv(here("results", "publications_CA.csv"))
 
 publications <- publications |>
   left_join(corresponding_authorship, by = "doi")
@@ -289,6 +290,16 @@ shiny_table <- dashboard_metrics |>
          orcids, has_any_orcid,
          bar, pie, bardot, box, dot, hist, violin)
 
+subset_dois <- readRDS(here("results", "transfer_works.rds"))
+
+subset_dois <- subset_dois |>
+  mutate(doi =  doi_full2stripped(doi)) |>
+  distinct(doi) |>
+  pull(doi)
+
+shiny_table <- shiny_table |>
+  filter(doi %in% subset_dois)
+
 write_csv(shiny_table, here("shiny_app", "data", "dashboard_metrics.csv"))
 
 # dashboard_metrics |>
@@ -321,10 +332,10 @@ preprints_dataset_shiny <- vroom(here("results", "preprints_oa.csv")) |>
   select(doi, title, journal_title, year)
 write_csv(preprints_dataset_shiny, here("shiny_app", "data", "preprints_dataset_shiny.csv"))
 
-prosp_reg_dataset_shiny <- vroom(here("results", "prosp_reg_dataset_shiny.csv")) |>
-  rename(registration_date = study_first_submitted_date) |>
-  select(nct_id, start_date, registration_date, has_prospective_registration)
-write_csv(prosp_reg_dataset_shiny, here("shiny_app", "data", "prosp_reg_dataset_shiny.csv"))
+# prosp_reg_dataset_shiny <- vroom(here("results", "prosp_reg_dataset_shiny.csv")) |>
+#   rename(registration_date = study_first_submitted_date) |>
+#   select(nct_id, start_date, registration_date, has_prospective_registration)
+# write_csv(prosp_reg_dataset_shiny, here("shiny_app", "data", "prosp_reg_dataset_shiny.csv"))
 
 orcid_dataset_shiny <- vroom(here("results", "orcid.csv")) |>
   distinct(date, .keep_all = TRUE) |> # next part only if false parsing in file with spliced rows
@@ -333,38 +344,23 @@ orcid_dataset_shiny <- vroom(here("results", "orcid.csv")) |>
          orcid_count = as.numeric(orcid_count))
 write_csv(orcid_dataset_shiny, here("shiny_app", "data", "orcid_results.csv"))
 
-EU_trialstracker_dataset_shiny <- vroom(here("results", "EU_trialstracker.csv")) |>
-  group_by(retrieval_date) |>
-  slice(1) |>
-  mutate(perc_reported = round(total_reported/total_due, 3)) |>
-  arrange(desc(retrieval_date))
-write_csv(EU_trialstracker_dataset_shiny, here("shiny_app", "data", "EU_trialstracker_past_data.csv"))
+# EU_trialstracker_dataset_shiny <- vroom(here("results", "EU_trialstracker.csv")) |>
+#   group_by(retrieval_date) |>
+#   slice(1) |>
+#   mutate(perc_reported = round(total_reported/total_due, 3)) |>
+#   arrange(desc(retrieval_date))
+# write_csv(EU_trialstracker_dataset_shiny, here("shiny_app", "data", "EU_trialstracker_past_data.csv"))
 
 preprints <- vroom(here("results", "preprints_oa.csv")) |>
   group_by(year) |>
   summarize(n_preprints = n())
 
-prospective_registration <- vroom(here("results", "prospective_registration.csv"))
-
-max_year <- max(prospective_registration$year)
+# prospective_registration <- vroom(here("results", "prospective_registration.csv"))
+#
+max_year <- max(preprints$year)
 
 shiny_table_aggregate_metrics <- tibble(year = 2006:max_year) |>
-  left_join(prospective_registration) |>
+  # left_join(prospective_registration) |>
   left_join(preprints)
 
 write_csv(shiny_table_aggregate_metrics, here("shiny_app", "data", "dashboard_metrics_aggregate.csv"))
-
-#----------------------------------------------------------------------------------------
-# fair assessment
-#----------------------------------------------------------------------------------------
-
-fair_table <- vroom(here("results", "fair_assessment_2021.csv"), show_col_types = FALSE)
-write_csv(fair_table, here("shiny_app", "data", "fair_assessment_2021.csv"))
-
-#----------------------------------------------------------------------------------------
-# berlin science survey
-#----------------------------------------------------------------------------------------
-
-bss_stata <- read_dta(here("results", "bss-pilot22-char.dta"))
-write_dta(bss_stata, here("shiny_app", "data", "bss-pilot22-char.dta"))
-
