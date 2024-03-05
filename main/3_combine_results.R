@@ -329,7 +329,8 @@ write_csv(shiny_table, here("shiny_app", "data", "dashboard_metrics.csv"))
 #----------------------------------------------------------------------------------------
 
 preprints_dataset_shiny <- vroom(here("results", "preprints_oa.csv")) |>
-  select(doi, title, journal_title, year)
+  select(doi, title, journal_title, year) |>
+  filter(doi %in% subset_dois)
 write_csv(preprints_dataset_shiny, here("shiny_app", "data", "preprints_dataset_shiny.csv"))
 
 # prosp_reg_dataset_shiny <- vroom(here("results", "prosp_reg_dataset_shiny.csv")) |>
@@ -352,15 +353,18 @@ write_csv(orcid_dataset_shiny, here("shiny_app", "data", "orcid_results.csv"))
 # write_csv(EU_trialstracker_dataset_shiny, here("shiny_app", "data", "EU_trialstracker_past_data.csv"))
 
 preprints <- vroom(here("results", "preprints_oa.csv")) |>
+  filter(doi %in% subset_dois) |>
   group_by(year) |>
   summarize(n_preprints = n())
 
 # prospective_registration <- vroom(here("results", "prospective_registration.csv"))
 #
-max_year <- max(preprints$year)
+# max_year <- max(preprints$year)
+max_year <- 2022
 
 shiny_table_aggregate_metrics <- tibble(year = 2006:max_year) |>
   # left_join(prospective_registration) |>
+
   left_join(preprints)
 
 write_csv(shiny_table_aggregate_metrics, here("shiny_app", "data", "dashboard_metrics_aggregate.csv"))
